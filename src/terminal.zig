@@ -5,7 +5,7 @@ const c = @import("c.zig").c;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
-pub const TerminalError = error{ TermiosGetError, TermiosSetError, ReadError, BufferError, FmtWriteError, BufferError };
+pub const TerminalError = error{ TermiosGetError, TermiosSetError, ReadError, BufferError, FmtWriteError, BufferError, WinSizeGetError };
 
 // TODO Types and Docs!
 pub const Terminal = struct {
@@ -90,5 +90,19 @@ pub const Terminal = struct {
             return error.WriteError;
 
         return result;
+    }
+
+    // TODO: Implement Fallback
+    pub fn getWindowSize(self: *Self) TerminalError![2]u64 {
+        var winsize: c.winsize = undefined;
+
+        var result = c.ioctl(os.STDOUT_FILENO, c.TIOCGWINSZ, &winsize);
+        if (result == -1 or winsize.ws_col == 0)
+            return error.WinSizeGetError;
+
+        return [2]u64{
+            winsize.ws_col,
+            winsize.ws_row,
+        };
     }
 };
