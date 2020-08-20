@@ -2,20 +2,32 @@ const std = @import("std");
 const os = std.os;
 const c = @import("c.zig").c;
 
+const ArrayList = std.ArrayList;
+const Allocator = std.mem.Allocator;
+
 pub const TerminalError = error{ TermiosGetError, TermiosSetError, ReadError, WriteError };
 
 // TODO Types and Docs!
 pub const Terminal = struct {
     const Self = @This();
 
+    allocator: *Allocator,
     stored_termios: c.termios,
+    buffer: ArrayList(u8),
 
-    pub fn init() Self {
+    pub fn init(allocator: *Allocator) Self {
         var self = Self{
+            .allocator = allocator,
             .stored_termios = undefined,
+            .buffer = ArrayList(u8).init(allocator),
         };
 
         return self;
+    }
+
+    pub fn deinit(self: *Self) void {
+        self.buffer.deinit();
+        self.* = undefined;
     }
 
     pub fn setTermios(self: *Self, termios: *c.termios) TerminalError!void {
@@ -59,5 +71,9 @@ pub const Terminal = struct {
             if (n == -1)
                 return error.ReadError;
         }
+    }
+
+    pub fn write(self: *Self, slice: []const u8) TerminalError!void {
+        self.buffer.appendSlice(slice) catch |_| return error.WriteError;
     }
 };
