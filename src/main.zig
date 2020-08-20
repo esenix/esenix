@@ -15,12 +15,14 @@ pub fn main() !void {
     try terminal.enableRawMode();
 
     while (true) {
-        var char = try terminal.read();
-        if (char == 'q')
-            break;
+        try terminal.clearScreen();
 
         try terminal.write(">");
         _ = try terminal.flush();
+
+        var char = try terminal.read();
+        if (char == 'q')
+            break;
     }
 
     try terminal.restoreTermios();

@@ -5,7 +5,7 @@ const c = @import("c.zig").c;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
-pub const TerminalError = error{ TermiosGetError, TermiosSetError, ReadError, BufferError, FmtWriteError, BufferError, WinSizeGetError };
+pub const TerminalError = error{ TermiosGetError, TermiosSetError, ReadError, WriteError, FmtWriteError, BufferError, WinSizeGetError };
 
 // TODO Types and Docs!
 pub const Terminal = struct {
@@ -104,5 +104,10 @@ pub const Terminal = struct {
             winsize.ws_col,
             winsize.ws_row,
         };
+    }
+
+    pub fn clearScreen(self: *Self) TerminalError!void {
+        try self.write("\x1b[2J");
+        try self.write("\x1b[H");
     }
 };
