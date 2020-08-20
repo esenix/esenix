@@ -76,4 +76,14 @@ pub const Terminal = struct {
     pub fn write(self: *Self, slice: []const u8) TerminalError!void {
         self.buffer.appendSlice(slice) catch |_| return error.WriteError;
     }
+
+    pub fn flush(self: *Self) TerminalError!isize {
+        const slice = self.buffer.toOwnedSlice();
+
+        var result = c.write(os.STDOUT_FILENO, @ptrCast(*const c_void, slice), slice.len);
+        if (result == -1)
+            return error.WriteError;
+
+        return result;
+    }
 };

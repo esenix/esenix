@@ -18,6 +18,9 @@ pub fn main() !void {
         var char = try terminal.read();
         if (char == 'q')
             break;
+
+        try terminal.write(">");
+        _ = try terminal.flush();
     }
 
     try terminal.restoreTermios();
