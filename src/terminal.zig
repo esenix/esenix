@@ -5,7 +5,7 @@ const c = @import("c.zig").c;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
-pub const TerminalError = error{ TermiosGetError, TermiosSetError, ReadError, WriteError };
+pub const TerminalError = error{ TermiosGetError, TermiosSetError, ReadError, BufferError, FmtWriteError, BufferError };
 
 // TODO Types and Docs!
 pub const Terminal = struct {
@@ -75,6 +75,11 @@ pub const Terminal = struct {
 
     pub fn write(self: *Self, slice: []const u8) TerminalError!void {
         self.buffer.appendSlice(slice) catch |_| return error.WriteError;
+    }
+
+    pub fn writeFmt(self: *Self, comptime fmt: []const u8, args: var) TerminalError!void {
+        const slice = std.fmt.allocPrint(self.allocator, fmt, args) catch |_| return error.FmtWriteError;
+        self.buffer.appendSlice(slice) catch |_| return error.BufferError;
     }
 
     pub fn flush(self: *Self) TerminalError!isize {
