@@ -1,4 +1,4 @@
-use std::{io::stdout, time::Duration, sync::mpsc::{self, Receiver}};
+use std::{io::{stdout, Stdout}, time::Duration, sync::mpsc::{self, Receiver}};
 
 use crossterm::{
     cursor::SetCursorStyle,
@@ -7,11 +7,13 @@ use crossterm::{
 
 use ratatui::{
     prelude::CrosstermBackend,
-    Terminal,
     widgets::Block
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+type Backend = CrosstermBackend<Stdout>;
+type Terminal = ratatui::Terminal<Backend>;
 
 fn start_crossterm_event_polling_thread() -> Receiver<KeyEvent> {
     let (tx, rx) = mpsc::channel();
@@ -32,7 +34,7 @@ fn start_crossterm_event_polling_thread() -> Receiver<KeyEvent> {
 }
 
 fn main() -> Result<()> {
-    let backend = CrosstermBackend::new(stdout());
+    let backend = Backend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
     // TODO: CursorStyle
