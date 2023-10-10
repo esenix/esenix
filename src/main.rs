@@ -1,8 +1,8 @@
-use std::{io::stdout, time::Duration, sync::mpsc};
+use std::{io::stdout, time::Duration, sync::mpsc::{self, Receiver}};
 
 use crossterm::{
     cursor::SetCursorStyle,
-    terminal::{EnterAlternateScreen, enable_raw_mode}, event::KeyCode
+    terminal::{EnterAlternateScreen, enable_raw_mode}, event::{KeyCode, KeyEvent}
 };
 
 use ratatui::{
@@ -13,16 +13,7 @@ use ratatui::{
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-fn main() -> Result<()> {
-    let backend = CrosstermBackend::new(stdout());
-    let mut terminal = Terminal::new(backend)?;
-
-    // TODO: CursorStyle
-    crossterm::execute!(stdout(), SetCursorStyle::SteadyBar, EnterAlternateScreen)?;
-
-    enable_raw_mode()?;
-    terminal.clear()?;
-
+fn start_crossterm_event_polling_thread() -> Receiver<KeyEvent> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         use crossterm::event::{self, Event};
@@ -37,8 +28,23 @@ fn main() -> Result<()> {
         }
     });
 
+    return rx;
+}
+
+fn main() -> Result<()> {
+    let backend = CrosstermBackend::new(stdout());
+    let mut terminal = Terminal::new(backend)?;
+
+    // TODO: CursorStyle
+    crossterm::execute!(stdout(), SetCursorStyle::SteadyBar, EnterAlternateScreen)?;
+
+    enable_raw_mode()?;
+    terminal.clear()?;
+
+    let key_event_receiver = start_crossterm_event_polling_thread();
+
     loop {
-        if let Ok(key_event) = rx.try_recv() {
+        if let Ok(key_event) = key_event_receiver.try_recv() {
             match key_event.code {
                 KeyCode::Esc => break,
                 _ => {}
