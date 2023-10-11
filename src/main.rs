@@ -16,12 +16,43 @@ type Backend = CrosstermBackend<Stdout>;
 type Terminal = ratatui::Terminal<Backend>;
 struct EsenixContext {
     mode: EsenixMode,
+    windows: Vec<Window>,
+    buffers: Vec<Buffer>,
 }
+
+impl Default for EsenixContext {
+    fn default() -> Self {
+        Self {
+            mode: EsenixMode::Normal,
+            windows: Vec::new(),
+            buffers: Vec::new(),
+        }
+    }
 }
 
 enum EsenixMode {
     Normal,
     Insert,
+}
+
+enum Buffer {
+    Text {
+        name: String,
+        content: String,
+    },
+    Canvas
+}
+
+struct Window {
+    buffer_idx: Option<usize>,
+}
+
+impl Default for Window {
+    fn default() -> Self {
+        Self {
+            buffer_idx: None
+        }
+    }
 }
 
 fn start_crossterm_event_polling_thread() -> Receiver<KeyEvent> {
