@@ -155,12 +155,12 @@ impl TuiRenderable for Window {
         match self.buffer_idx {
             Some(idx) => {
                 let buffer = context.buffers.get(idx).unwrap();
-                let p = Paragraph::new(format!("{}", buffer.name));
+                let p = Paragraph::new(format!("{}", buffer.content));
                 frame.render_widget(p, area);
             }
             None => {
                 context.buffers.len();
-                let p = Paragraph::new(format!("Open Buffers: {}", context.buffers.len()));
+                let p = Paragraph::new("<- NO BUFFER ATTACHED ->");
 
                 frame.render_widget(p, area);
             }
@@ -192,8 +192,8 @@ fn main() -> Result<()> {
     //* push example buffer
     context.buffers.push(
         Buffer {
-            name: String::from("example"),
-            content: String::from("hallo, welt"),
+            name: String::from("example.c"),
+            content: String::from("int main()\n{\n    print(\"Hallo, Welt!\")\n}"),
         }
     );
 
