@@ -14,6 +14,15 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 type Backend = CrosstermBackend<Stdout>;
 type Terminal = ratatui::Terminal<Backend>;
+struct EsenixContext {
+    mode: EsenixMode,
+}
+}
+
+enum EsenixMode {
+    Normal,
+    Insert,
+}
 
 fn start_crossterm_event_polling_thread() -> Receiver<KeyEvent> {
     let (tx, rx) = mpsc::channel();
