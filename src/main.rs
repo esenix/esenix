@@ -27,6 +27,34 @@ struct EsenixContext {
     buffers: Vec<Buffer>,
 }
 
+impl EsenixContext {
+    fn push_window(&mut self, window: Window) {
+        self.windows.push(window);
+        // TODO: always true?
+        self.active_window_idx = Some(self.windows.len() - 1);
+    }
+
+    fn active_window(&self) -> &Window {
+        let window_idx = self.active_window_idx.unwrap_or(0);
+        // TODO: expect
+        let window = self.windows.get(window_idx).expect("there should always be a window");
+
+        return window;
+    }
+
+    fn active_window_mut(&mut self) -> &mut Window {
+        let window_idx = self.active_window_idx.unwrap_or(0);
+        // TODO: expect
+        let window = self.windows.get_mut(window_idx).expect("there should always be a window");
+
+        return window;
+    }
+
+    fn push_buffer(&mut self, buffer: Buffer) {
+        self.buffers.push(buffer);
+    }
+}
+
 /**
  * this is used to render the status bar
  */
@@ -197,8 +225,8 @@ fn main() -> Result<()> {
         }
     );
 
-    context.windows.push(Window::default());
-    context.active_window_idx = Some(0);
+    context.push_window(Window::default());
+    context.active_window_mut().buffer_idx = Some(0);
 
     let backend = Backend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
