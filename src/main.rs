@@ -1,4 +1,8 @@
-use std::{io::{stdout, Stdout}, time::Duration, sync::mpsc::{self, Receiver}, fmt::Display};
+use std::{
+    io::{stdout, Stdout},
+    time::Duration,
+    sync::mpsc::{self, Receiver}, path::PathBuf
+};
 
 use crossterm::{
     cursor::SetCursorStyle,
@@ -6,8 +10,8 @@ use crossterm::{
 };
 
 use ratatui::{
-    prelude::{CrosstermBackend, Rect},
-    widgets::{Block, Paragraph}
+    prelude::{CrosstermBackend, Rect, Layout, Direction, Constraint},
+    widgets::Paragraph
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -79,8 +83,12 @@ enum Buffer {
     Text {
         name: String,
         content: String,
+        cursor: (usize, usize),
     },
-    Canvas
+    FileTree {
+        base_dir_path: PathBuf,
+        cursor: (usize, usize),
+    }
 }
 
 struct Window {
@@ -96,19 +104,17 @@ impl Default for Window {
 }
 
 trait TuiRenderable {
-    fn render(&self, context: &EsenixContext, frame: &mut Frame, area: Rect);
     fn render(&self, context: Option<&EsenixContext>, frame: &mut Frame, area: Rect);
 }
 
 impl TuiRenderable for Window {
-    fn render(&self, context: &EsenixContext, frame: &mut Frame, area: Rect) {
     fn render(&self, context: Option<&EsenixContext>, frame: &mut Frame, area: Rect) {
         let context = context.unwrap();
 
         match self.buffer_idx {
             Some(idx) => {
                 let buffer = context.buffers.get(idx).unwrap();
-                if let Buffer::Text { name, content } = buffer {
+                if let Buffer::Text { name, content, cursor } = buffer {
                     let p = Paragraph::new(format!("{name} --> {content}"));
                     frame.render_widget(p, area);
                 }
@@ -148,7 +154,8 @@ fn main() -> Result<()> {
     context.buffers.push(
         Buffer::Text {
             name: String::from("example"),
-            content: String::from("hallo, welt")
+            content: String::from("hallo, welt"),
+            cursor: (0, 0),
         }
     );
 
