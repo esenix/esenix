@@ -18,8 +18,45 @@ type Frame<'a> = ratatui::Frame<'a, Backend>;
 
 struct EsenixContext {
     mode: EsenixMode,
+    active_window_idx: Option<usize>,
     windows: Vec<Window>,
     buffers: Vec<Buffer>,
+}
+
+/**
+ * this is used to render the status bar
+ */
+impl TuiRenderable for EsenixContext {
+    fn render(&self, _: Option<&EsenixContext>, frame: &mut Frame, area: Rect) {
+        let vert_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(50),
+                Constraint::Percentage(50),
+            ])
+            .split(area);
+
+        let top_bar_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(20),
+                Constraint::Percentage(20),
+                Constraint::Percentage(20),
+                Constraint::Percentage(20),
+                Constraint::Percentage(20),
+            ]).split(vert_layout[0]);
+
+        let active_window_hint_str = self.active_window_idx
+            .map(|idx| format!("Window: {idx}"))
+            .unwrap_or_else(|| String::from("No window"));
+
+        let active_window_hint_paragraph = Paragraph::new(active_window_hint_str);
+
+        let open_buffers_hint_paragraph = Paragraph::new(format!("Open Buffers: {}", self.buffers.len()));
+
+        frame.render_widget(active_window_hint_paragraph, top_bar_layout[0]);
+        frame.render_widget(open_buffers_hint_paragraph, top_bar_layout[1]);
+    }
 }
 
 impl Default for EsenixContext {
@@ -28,6 +65,7 @@ impl Default for EsenixContext {
             mode: EsenixMode::Normal,
             windows: Vec::new(),
             buffers: Vec::new(),
+            active_window_idx: None
         }
     }
 }
@@ -59,10 +97,14 @@ impl Default for Window {
 
 trait TuiRenderable {
     fn render(&self, context: &EsenixContext, frame: &mut Frame, area: Rect);
+    fn render(&self, context: Option<&EsenixContext>, frame: &mut Frame, area: Rect);
 }
 
 impl TuiRenderable for Window {
     fn render(&self, context: &EsenixContext, frame: &mut Frame, area: Rect) {
+    fn render(&self, context: Option<&EsenixContext>, frame: &mut Frame, area: Rect) {
+        let context = context.unwrap();
+
         match self.buffer_idx {
             Some(idx) => {
                 let buffer = context.buffers.get(idx).unwrap();
@@ -111,6 +153,7 @@ fn main() -> Result<()> {
     );
 
     context.windows.push(Window::default());
+    context.active_window_idx = Some(0);
 
     let backend = Backend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
@@ -137,8 +180,18 @@ fn main() -> Result<()> {
         }
 
         terminal.draw(|frame| {
+            let main_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Percentage(98),
+                    Constraint::Min(2)
+                ])
+                .split(frame.size());
+
             context.windows.iter()
-                .for_each(|window| window.render(&context, frame, frame.size()))
+                .for_each(|window| window.render(Some(&context), frame, main_layout[0]));
+
+            context.render(None, frame, main_layout[1]);
         })?;
     }
 
