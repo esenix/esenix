@@ -130,7 +130,6 @@ impl EsenixMode {
 struct Buffer {
     name: String,
     content: String,
-    cursor: (usize, usize),
 }
 
 struct Window {
@@ -195,7 +194,6 @@ fn main() -> Result<()> {
         Buffer {
             name: String::from("example"),
             content: String::from("hallo, welt"),
-            cursor: (0, 0),
         }
     );
 
