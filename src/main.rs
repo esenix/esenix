@@ -1,7 +1,7 @@
 use std::{
     io::{stdout, Stdout},
     time::Duration,
-    sync::mpsc::{self, Receiver}, path::PathBuf
+    sync::mpsc::{self, Receiver}
 };
 
 use crossterm::{
@@ -11,7 +11,7 @@ use crossterm::{
 
 use ratatui::{
     prelude::{CrosstermBackend, Rect, Layout, Direction, Constraint},
-    widgets::Paragraph
+    widgets::{Paragraph, Block}, style::{Style, Color}
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -40,26 +40,65 @@ impl TuiRenderable for EsenixContext {
             ])
             .split(area);
 
-        let top_bar_layout = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(20),
-                Constraint::Percentage(20),
-                Constraint::Percentage(20),
-                Constraint::Percentage(20),
-                Constraint::Percentage(20),
-            ]).split(vert_layout[0]);
+        {
+            let top_bar_layout = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                ]).split(vert_layout[0]);
 
-        let active_window_hint_str = self.active_window_idx
-            .map(|idx| format!("Window: {idx}"))
-            .unwrap_or_else(|| String::from("No window"));
+            let active_window_hint_str = self.active_window_idx
+                .map(|idx| format!("Window: {idx}"))
+                .unwrap_or_else(|| String::from("No window"));
 
-        let active_window_hint_paragraph = Paragraph::new(active_window_hint_str);
+            let active_window_hint_paragraph = Paragraph::new(active_window_hint_str);
 
-        let open_buffers_hint_paragraph = Paragraph::new(format!("Open Buffers: {}", self.buffers.len()));
 
-        frame.render_widget(active_window_hint_paragraph, top_bar_layout[0]);
-        frame.render_widget(open_buffers_hint_paragraph, top_bar_layout[1]);
+            let active_window_buffer_hint_str = self.active_window_idx
+                .and_then(|idx| self.windows.get(idx)) // TODO: unwrap
+                .and_then(|window| window.buffer_idx)
+                .and_then(|buf_idx| self.buffers.get(buf_idx).zip(Some(buf_idx)))
+                .map(|(buf, idx)| format!("Attached Buffer: <{idx}::{}>", buf.name))
+                .unwrap_or_else(|| String::from("No buffer attached"));
+
+            let active_window_buffer_hint_paragraph = Paragraph::new(active_window_buffer_hint_str);
+
+            let open_buffers_hint_paragraph = Paragraph::new(format!("Open Buffers: {}", self.buffers.len()));
+
+            // background
+            frame.render_widget(
+                Block::default()
+                    .style(
+                        Style::default()
+                            .bg(Color::DarkGray)
+                    ),
+                vert_layout[0]
+            );
+
+            frame.render_widget(active_window_hint_paragraph, top_bar_layout[0]);
+            frame.render_widget(active_window_buffer_hint_paragraph, top_bar_layout[1]);
+            frame.render_widget(open_buffers_hint_paragraph, top_bar_layout[2]);
+        }
+
+        {
+            let bottom_bar_layout = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(20),
+                ]).split(vert_layout[1]);
+
+            let esenix_mode_hint_paragraph = Paragraph::new(format!("-- {} --", self.mode.as_str()));
+
+            frame.render_widget(esenix_mode_hint_paragraph, bottom_bar_layout[0]);
+        }
     }
 }
 
@@ -79,16 +118,19 @@ enum EsenixMode {
     Insert,
 }
 
-enum Buffer {
-    Text {
-        name: String,
-        content: String,
-        cursor: (usize, usize),
-    },
-    FileTree {
-        base_dir_path: PathBuf,
-        cursor: (usize, usize),
+impl EsenixMode {
+    fn as_str(&self) -> &'static str {
+        match self {
+            EsenixMode::Normal => "Normal",
+            EsenixMode::Insert => "Insert"
+        }
     }
+}
+
+struct Buffer {
+    name: String,
+    content: String,
+    cursor: (usize, usize),
 }
 
 struct Window {
@@ -114,10 +156,8 @@ impl TuiRenderable for Window {
         match self.buffer_idx {
             Some(idx) => {
                 let buffer = context.buffers.get(idx).unwrap();
-                if let Buffer::Text { name, content, cursor } = buffer {
-                    let p = Paragraph::new(format!("{name} --> {content}"));
-                    frame.render_widget(p, area);
-                }
+                let p = Paragraph::new(format!("{}", buffer.name));
+                frame.render_widget(p, area);
             }
             None => {
                 context.buffers.len();
@@ -152,7 +192,7 @@ fn main() -> Result<()> {
 
     //* push example buffer
     context.buffers.push(
-        Buffer::Text {
+        Buffer {
             name: String::from("example"),
             content: String::from("hallo, welt"),
             cursor: (0, 0),
